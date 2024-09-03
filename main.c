@@ -122,7 +122,7 @@ int pin(void){
     return p;
 }
 
-int mai(void) {
+int main(void) {
     
         
         int r;
