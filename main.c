@@ -5,7 +5,7 @@
 #include <math.h>
 #include <stdlib.h>
 
-struct used {        // user profile create.§
+struct used {        // user profile create
     char name[100],date_of_birth[11];
     int pin,nid;
 }u2;
@@ -127,7 +127,8 @@ int main(void) {
         }
         
         else if (c == 4){   //payment
-            
+            printf("Enter the marchent number to continue: ");
+            scanf("%d",&num);
         }
         
         
@@ -166,8 +167,6 @@ int main(void) {
                     printf("Wrong Pin code.");
                 }
             }
-            
-
         }
         
         else{    //exit
