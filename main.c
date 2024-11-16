@@ -3,8 +3,8 @@
 #include <stdbool.h>
 #include <math.h>
 #include <stdlib.h>
-
-struct used {        // user profile create
+char logged_in_phone[14];
+struct used {
     char name[100],date_of_birth[11],phone[14];
     int pin,nid;
 }u2;
@@ -14,6 +14,91 @@ int security(void);
 bool val_phn(const char* phone);
 bool val_date(const char* date);
 void log_in(char num[100], int p);
+void log_transaction(const char* phone, const char* action, int amount);
+void view_transactions(const char* phone);
+void change_pin(const char* phone, int* current_pin);
+
+void log_transaction(const char* phone, const char* action, int amount) {
+    FILE* transFile = fopen("/Users/mdikramulhassan/Desktop/Swift_Project/proj/proj/transactions.txt", "a");
+    if (transFile != NULL) {
+        fprintf(transFile, "%s Action: %s, Amount: %d\n",phone,action, amount);
+        fclose(transFile);
+    } else {
+        printf("Error: Unable to log the transaction.\n");
+    }
+}
+
+void view_transactions(const char* phone) {
+    FILE* transFile = fopen("/Users/mdikramulhassan/Desktop/Swift_Project/proj/proj/transactions.txt", "r");
+    char line[200];
+    bool found = false;
+
+    if (transFile == NULL) {
+        printf("No transaction history found.\n");
+        return;
+    }
+
+    printf("\nTransaction history for phone:\n");
+    while (fgets(line, sizeof(line), transFile)) {
+        if (strstr(line, phone) != NULL) {
+            printf("%s", line);
+            found = true;
+        }
+    }
+    fclose(transFile);
+
+    if (!found) {
+        printf("No transactions found for this phone.\n");
+    }
+}
+
+void change_pin(const char* phone, int* current_pin) {
+    int old_pin, new_pin;
+
+    printf("Enter your current PIN: ");
+    scanf("%d", &old_pin);
+
+    if (old_pin != *current_pin) {
+        printf("Incorrect current PIN.\n");
+        return;
+    }
+
+    printf("Enter your new PIN: ");
+    scanf("%d", &new_pin);
+
+   
+    FILE* file = fopen("/Users/mdikramulhassan/Desktop/Swift_Project/proj/proj/file.txt", "r+");
+    if (file == NULL) {
+        printf("Error: Unable to open user file.\n");
+        return;
+    }
+
+    char tempFileName[] = "temp.txt";
+    FILE* tempFile = fopen(tempFileName, "w");
+
+    char line[200];
+    char name[100], dob[11], phone_in_file[14];
+    int pin_in_file, nid;
+
+    while (fgets(line, sizeof(line), file)) {
+        sscanf(line, "%[^,],%[^,],%[^,],%d,%d", name, dob, phone_in_file, &pin_in_file, &nid);
+        if (strcmp(phone_in_file, phone) == 0) {
+           
+            fprintf(tempFile, "%s,%s,%s,%d,%d\n", name, dob, phone_in_file, new_pin, nid);
+            *current_pin = new_pin;
+        } else {
+            fprintf(tempFile, "%s", line);
+        }
+    }
+
+    fclose(file);
+    fclose(tempFile);
+
+    remove("/Users/mdikramulhassan/Desktop/Swift_Project/proj/proj/file.txt");
+    rename(tempFileName, "/Users/mdikramulhassan/Desktop/Swift_Project/proj/proj/file.txt");
+
+    printf("PIN changed successfully!\n");
+}
 
 bool val_date(const char* date) {
 
@@ -129,7 +214,7 @@ int user_type(void){
         scanf("%d",&u2.nid);
         p = u2.pin;
         
-        FILE *file = fopen("/Users/mdikramulhassan/Desktop/Swift_Project/proj/file.txt", "a");
+        FILE *file = fopen("/Users/mdikramulhassan/Desktop/Swift_Project/proj/proj/file.txt", "a");
                 if (file != NULL) {
                     fprintf(file, "%s,%s,%s,%d,%d\n",
                             u2.name, u2.date_of_birth,u2.phone, u2.pin, u2.nid);
@@ -152,7 +237,7 @@ void log_in(char num[100], int p) {
     bool login_success = false;
 
     while (!login_success) {
-        filePointer = fopen("/Users/mdikramulhassan/Desktop/Swift_Project/proj/file.txt", "r");
+        filePointer = fopen("/Users/mdikramulhassan/Desktop/Swift_Project/proj/proj/file.txt", "r");
 
         if (filePointer == NULL) {
             printf("Error: Unable to open the file.\n");
@@ -171,6 +256,8 @@ void log_in(char num[100], int p) {
                 if (strcmp(file_phone, num) == 0 && file_pin == p) {
                     printf("Login successful! Welcome, %s.\n", file_name);
                     login_success = true;
+                    
+                    //strcpy(logged_in_phone, file_phone);
                     break;
                 }
             }
@@ -195,10 +282,10 @@ int main(void) {
     int pn = user_type();
 
     int c,p,num,amount,balance = 100000,out;
-  
-    while (1) 
+    
+    while (1)
     {
-        printf("What type of operatiobn you want to do with: \n1. Send Money\n2. Send Money to non user\n3. Mobile Recharge\n4. Payment\n5. Cash Out\n6. Add Money\n7. Exit. \n");
+        printf("What type of operatiobn you want to do with: \n1. Send Money\n2. Send Money to non user\n3. Mobile Recharge\n4. Payment\n5. Cash Out\n6. Add Money\n7. Balance. \n8. Transcaction history. \n9. Change pin. \n10. Exit. \n");
         printf("Enter your choice: ");
         scanf("%d",&c);
         
@@ -213,6 +300,7 @@ int main(void) {
             if (p == pn) {
                 printf("Success");
                 balance = balance-amount;
+                log_transaction(logged_in_phone, "Send Money", amount);
             }
             else{
                 printf("Failed");
@@ -232,6 +320,7 @@ int main(void) {
             if (p == pn) {
                 printf("Success");
                 balance = balance-amount;
+                log_transaction(logged_in_phone, "Send Money to non user", amount);
             }
             else{
                 printf("Failed");
@@ -249,6 +338,7 @@ int main(void) {
             if (p == pn) {
                 printf("%d bdt was successfully recharge to %d.",num,amount);
                 balance = balance - amount;
+                log_transaction(logged_in_phone, "Mobile Recharge", amount);
             }
             else{
                 printf("Pin number is not correct.");
@@ -266,6 +356,7 @@ int main(void) {
             if (p == pn) {
                 printf("%d bdt was successfully recharge to %d.",num,amount);
                 balance = balance - amount;
+                log_transaction(logged_in_phone, "Payment", amount);
             }
             else{
                 printf("Pin number is not correct.");
@@ -286,7 +377,9 @@ int main(void) {
                     long int ra = random();
                     printf("Your generated code is : %ld\n",ra);
                     printf("Enter the above code to ATM machine.");
-                    balance = balance - amount;}
+                    balance = balance - amount;
+                    log_transaction(logged_in_phone, "Cash Out", amount);
+                }
                 else{
                     printf("Wrong Pin code.");
                 }}
@@ -300,6 +393,7 @@ int main(void) {
                 if (p == pn) {
                     printf("Cash out to number: %d and amount: %d was successful.",num,amount);
                     balance = balance - amount;
+                    log_transaction(logged_in_phone, "Cash Out", amount);
                 }
                 else{
                     printf("Wrong Pin code.");
@@ -318,26 +412,30 @@ int main(void) {
                 printf("Entr your amount: ");
                 scanf("%d",&amount);
                 balance = balance + amount;
+                log_transaction(logged_in_phone, "Add Money", amount);
             }
             else if (ca ==2){
                 printf("Please Provide Your number to Agent.");
                 printf("Entr your amount: ");
                 scanf("%d",&amount);
                 balance = balance + amount;
+                log_transaction(logged_in_phone, "Add Money", amount);
             }
         }
         else if (c==7){
             printf("Your current balance is: %d",balance);
         }
-        else if (c == 8){
-            printf("");
+        else if (c == 8){//transaction history
+            view_transactions(logged_in_phone);
         }
-        
-        else if(c == 9){    //exit
+        else if (c == 9){// pin change
+            change_pin(logged_in_phone, &pn);
+        }
+        else if(c == 10){   
             return 0;
         }
         printf("\n");
-        //printf("balance: %d\n", balance);
+        
     }
     return 0;
 }
